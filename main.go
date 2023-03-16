@@ -159,7 +159,10 @@ func main() {
 	fmt.Println(res2.PaymentRequest)
 
 	inv := <-invoiceUpdates
-	fmt.Println(inv)
+	if inv.State != invpkg.ContractOpen {
+		fmt.Println("no open invoice")
+		return
+	}
 
 	// Get info
 	/*info, err := clientB.Client.GetInfo(ctx)
@@ -184,8 +187,12 @@ func main() {
 	time.Sleep(1 * time.Second)
 
 	inv = <-invoiceUpdates
-	fmt.Println(inv)
+	if inv.State != invpkg.ContractSettled {
+		fmt.Println("no settled invoice")
+		return
+	}
+	fmt.Println("Settled")
 
-	//wg.Wait()
+	wg.Wait()
 
 }
