@@ -7,7 +7,7 @@ import (
 	"time"
 
 	c "github.com/lightninglabs/lndclient"
-	"github.com/lightningnetwork/lnd/channeldb"
+	invpkg "github.com/lightningnetwork/lnd/invoices"
 	"github.com/lightningnetwork/lnd/lnrpc"
 	"github.com/lightningnetwork/lnd/lntypes"
 	"github.com/lightningnetwork/lnd/lnwire"
@@ -55,15 +55,15 @@ func unmarshalInvoice(resp *lnrpc.Invoice) (*c.Invoice, error) {
 
 	switch resp.State {
 	case lnrpc.Invoice_OPEN:
-		invoice.State = channeldb.ContractOpen
+		invoice.State = invpkg.ContractOpen
 
 	case lnrpc.Invoice_ACCEPTED:
-		invoice.State = channeldb.ContractAccepted
+		invoice.State = invpkg.ContractAccepted
 
 	// If the invoice is settled, it also has a non-nil preimage, which we
 	// can set on our invoice.
 	case lnrpc.Invoice_SETTLED:
-		invoice.State = channeldb.ContractSettled
+		invoice.State = invpkg.ContractSettled
 		preimage, err := lntypes.MakePreimage(resp.RPreimage)
 		if err != nil {
 			return nil, err
@@ -71,7 +71,7 @@ func unmarshalInvoice(resp *lnrpc.Invoice) (*c.Invoice, error) {
 		invoice.Preimage = &preimage
 
 	case lnrpc.Invoice_CANCELED:
-		invoice.State = channeldb.ContractCanceled
+		invoice.State = invpkg.ContractCanceled
 
 	default:
 		return nil, fmt.Errorf("unknown invoice state: %v",
@@ -99,10 +99,10 @@ func main() {
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	clientB, err := c.NewBasicClient("localhost:10002",
-		"/home/erik/dev/bob/tls.cert",
-		"/home/erik/dev/bob/data/chain/bitcoin/simnet/",
-		"simnet", c.MacFilename("admin.macaroon"))
+	clientB, err := c.NewLndServices(&c.LndServicesConfig{LndAddress: "localhost:10002",
+		TLSPath:     "/home/erik/dev/bob/tls.cert",
+		MacaroonDir: "/home/erik/dev/bob/data/chain/bitcoin/simnet/",
+		Network:     "simnet"})
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -165,7 +165,24 @@ func main() {
 	inv := <-invoiceUpdates
 	fmt.Println(inv)
 
-	res3, err := clientB
+	// Get info
+	info, err := clientB.Client.GetInfo(ctx)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Println(info)
+	// Get channel
+	channels, err := clientB.Client.ListChannels(ctx, true, true)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	fmt.Println(channels[0].ChannelID)
+	res3 := clientB.Client.PayInvoice(ctx, res2.PaymentRequest, 100, &channels[0].ChannelID)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	outchan := <-res3
+	fmt.Println(outchan)
 	//wg.Wait()
 
 }
