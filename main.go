@@ -101,8 +101,10 @@ func main() {
 	}
 	clientB, err := c.NewLndServices(&c.LndServicesConfig{LndAddress: "localhost:10002",
 		TLSPath:     "/home/erik/dev/bob/tls.cert",
-		MacaroonDir: "/home/erik/dev/bob/data/chain/bitcoin/simnet/",
-		Network:     "simnet"})
+		MacaroonDir: "/home/erik/dev/bob/data/chain/bitcoin/simnet",
+		Network:     "simnet",
+
+		Insecure: true})
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -143,46 +145,47 @@ func main() {
 				fmt.Println("err2")
 				return
 			}
-
-			select {
-			case invoiceUpdates <- invoice:
-				fmt.Println("added invoice!!")
-				fmt.Println(invoice.Amount)
-			default:
-			}
+			invoiceUpdates <- invoice
+			fmt.Println("added invoice!!")
+			fmt.Println(invoice.Amount)
 		}
 
 	}()
-	time.Sleep(3)
-	res2, err := clientA.AddInvoice(ctx, &lnrpc.Invoice{Value: 100})
+
+	res2, err := clientA.AddInvoice(ctx, &lnrpc.Invoice{Value: 10})
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 	fmt.Println(res2.PaymentRequest)
 
-	time.Sleep(1)
-	//var inv *c.Invoice
 	inv := <-invoiceUpdates
 	fmt.Println(inv)
 
 	// Get info
-	info, err := clientB.Client.GetInfo(ctx)
+	/*info, err := clientB.Client.GetInfo(ctx)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	fmt.Println(info)
+	fmt.Println(info)*/
+
 	// Get channel
 	channels, err := clientB.Client.ListChannels(ctx, true, true)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	fmt.Println(channels[0].ChannelID)
-	res3 := clientB.Client.PayInvoice(ctx, res2.PaymentRequest, 100, &channels[0].ChannelID)
+
+	res3 := clientB.Client.PayInvoice(ctx, res2.PaymentRequest, 10, &channels[0].ChannelID)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 	outchan := <-res3
 	fmt.Println(outchan)
+
+	time.Sleep(1 * time.Second)
+
+	inv = <-invoiceUpdates
+	fmt.Println(inv)
+
 	//wg.Wait()
 
 }
