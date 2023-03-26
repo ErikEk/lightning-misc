@@ -40,7 +40,7 @@ func block() {
 	}
 	fmt.Println(ret.BlockHash)
 
-	clientB.ChainNotifier
+	//clientB.ChainNotifier
 	invoiceStream, err := clientA.SubscribeInvoices(ctx2, &lnrpc.InvoiceSubscription{})
 	if err != nil {
 		fmt.Println(err.Error())
